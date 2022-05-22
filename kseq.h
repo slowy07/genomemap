@@ -148,4 +148,68 @@ typedef struct __kstring_t {
         ks_destroy(ks -> f); \
         free(ks); \
     }
-    
+
+#define _KSEQ_READ(SCOPE) \
+    SCOPE init kseq_read(kseq_t *seq) { \
+        int c; \
+        kstream_t *ks = seq -> f; \
+        if (seq -> last_char == 0) { /* then jump to the next header line */\
+            while ((c = ks_get(ks)) != -1 && c != '>' && c != '@'); \
+            if (c == -1) return -1;  /* end of file */ \
+            seq -> last_char = c; \
+        } /* else; the first hedaer char has been read in the previous call */ \
+        seq -> comment.l = seq -> seq.l = seq -> qual.l = 0; /* reset all */ \
+        if (ks_getuntil(ks, 0, seq-> name, &c) < 0) return -1; /* EOF exit normal */\
+        if (c != '\n') ks_getuntil(ks, KS_SEP_LINE, &seq -> comment, 0); /* read q comment */\
+        if (seq -> seq.s == 0) { /* loop, but slow */ \
+            seq -> seq.m = 256; \
+            seq -> seq.s = (char*)malloc(seq->seq.m);\
+        } \
+        while ((c = ks_get(ks)) != -1 && c != '>' && c != '+' && c != '@') {\
+            if (c == '\n') continue; \
+            seq -> seq.s[seq -> seq.l++] = c; /* thos is safe,always have enough space for 1 char */\
+            ks_getuntil2(ks, KS_SEP_LINE, &seq -> seq, 0, 1); /* red the rest of the line */\
+        } \
+        if (c == '>' || c == '@') seq -> last_char = c; /* the first header char has been read */ \
+        if (seq -> seq.l + 1 >= seq -> seq.m) { \
+            seq -> seq.m = seq -> seq.l + 2; \
+            kroundup32(seq -> seq.m); /* rounded the next char closest 2 ^k */\
+            seq -> seq.s = (char*) realloc(seq -> seq.s, seq-> seq.m);\
+        } \
+        seq -> seq.s[seq->seq.l] = 0; /*null terminated string*/\
+        if (c != '+') return seq->seq.l; \
+        if (seq -> qual.m < seq -> seq.m) { /* allocate memory for qual in case insufficient */\
+            seq -> qual.m  = seq -> seq.m; \
+            seq -> qual.s  = (char*) realloc(seq -> equal.s, seq->qual.m); \
+        }\
+        while ((c = ks_getc(ks)) != -1 && c != '\n');\
+        if (c == -1) return -2; /*error no quality string */\
+        while (ks_getuntil2(ks, KS_SEP_LINE, &seq-> qual, 0, 1) >= 0 && seq -> qual.l < seq -> seq.l); \
+        seq -> last_char = 0;\
+        if (seq -> seq.l != seq -> qual.l) return -2;\
+        return seq -> seq.l;\
+    }
+
+#define __KSEQ_TYPE(type_t) \
+    typedef struct { \
+        kstring_t name, comment, seq, qual;\
+        int last_char;\
+        kstream_t *f;\
+    } kseq_t;
+
+#define KSEQ_INIT2(SCOPE, type_t, __read) \
+    KSTREAM_INIT2(SCOPE, type_t, __read, 16384) \
+    __KSEQ_TYPE(type_t) \
+    __KSEQ_BASIC(SCOPE, type_t) \
+    __KSEQ_READ(SCOPE)
+
+#define KSEQ_INIT(type_t, __read) KSEQ_INIT2(static, type_t, __read)
+
+#define KSEQ_DECLARE(type_t) \
+    __KS_TYPE(type_t) \
+    __KSEQ_TYPE(type_t) \
+    extern kseq_t *kseq_init(type_t fd); \
+    void kseq_destroy(kseq_t *ks); \
+    int kseq_read(kseq_t *seq); \
+
+#endif
