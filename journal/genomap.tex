@@ -1,0 +1,78 @@
+\documentclass{bioinfo}
+\copyrightyear{2022}
+\pubyear(2022)
+
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage[ruled,vlined]{algorithm2e}
+\newcommand\mycommfont[1]{\footnotesize\rmfamily{\it #1}}
+\SetCommentSty{mycommfont}
+\SetKwComment{Comment}{$\triangleright$\ }{}
+
+\usepackage{natbib}
+\bibliographystyle{apalike}
+
+\DeclareMathOperator*{\argmax}{argmax}
+
+\begin{document}
+    \firstpage{1}
+    \title[Aligning nucleotide sequences with genomap]{genomap: pairwise alignment for nucleotide sequences}
+    \author[arfy slowy]{arfy}
+    \address{Indonesia}
+
+    \maketitle
+    \begin{abstract}
+        \section{Motivation:} Recent advances in sequencing technologies promise ultra-long reads of $\sim$100 kilo bases (kb)
+        in averange, full-length mRNA or cDNA in heigh troughput and genomic contigs over 100 mega bases (Mb) in length.
+        Existing alignment programs are unable or inefficient to process such data at scale, which presses for the development of new
+        algorithms.
+
+        \section{Results:} Genomap is a general-purpose alignment program to map DNA or long mRNA sequences againts a large reference database.
+        It works with accurate short reads of $\ge$100bp in length, $\ge$1kb genomic reads at error rate $\sim$15\%,
+        full-length noisy Direct RNA and cDNA reads, and assembly contigs or closely related full chromosomes of hundreds of megabases in length.
+        Genomap does split-read alignment, employs concave gap cost for long insertions and deletions (INDLEs) and introduces new heuristics to reduces
+        spurious alignments. It is 3--4 times as fast as mainstream short-read genomic or cDNA mappers at higher accuracy, 
+        surpassing most aligners specialized in one type alignment.
+
+        \section{Availability and implementations:}
+        \href{https://github.com/slowy07/genomap}
+
+        \section{contact:} slowyarfy3@gmail.com
+    \end{abstract}
+
+    \section{Introduction}
+    Single Molecule Real-Time (SMRT) sequencing technology and Oxford Nanopore technologies (ONT) produce reads over 10kbp in length at an error rate
+    $\sim$15\%. Several aligners have been developed for such
+    data~\citep{sedlazeck169557, Chaison:2012aa}. Most of them were five times as slow as mainstream for short-read
+    aligners~\citep{Langmead:2012fk} in terms of the number of bases mapped per econd. We speculated there could be subtantial room for speedup on
+    the trought that 10kb long sequences should be easier to map than 100bp reads because we can more effectively skip repetitive regions,
+    which are often the bottleneck of short-read alignment. We confirmed our speculation by achieving approximate mapping 50 times faster than BWWA-MEM.
+    ~\citep{Suzuki:1206aa} extended our work with fast and novel algorithm on generating base-level alignment, which in turn inspired us to develop genomap
+    with added functionality.
+
+    Both SMRT and ONT have been applied to the sequencing of spliced mRNAs (RNA-seq). While
+    traditional mRNA aligners work~\citep{Wu:2005vn,Iwata:2012aa}, they are not
+    optimized for long noisy sequence reads and are tens of times slower than
+    dedicated long-read aligners. When developing genomap initially for aligning
+    genomic DNA only, we realized minor modifications could enable the base
+    algorithm to map mRNAs as well. Genomap becomes a first RNA-seq aligner
+    specifically designed for long noisy reads. We have also extended the original
+    algorithm to map short reads at a speed faster than several mainstream
+    short-read mappers.
+
+    In this article, we will describe the genomap algorithm and its applications
+    to different types of input sequences. We will evaluate the performance and
+    accuracy of genomap on several simulated and real data sets and demonstrate
+    the versatility of genomap.
+
+    \begin{methods}
+        \section{Methods}
+        Genomap follos a typical seed-chain-align procedure as is used by most full-genome aligners.
+        It collects minimalizer~\citep{Roberts:2004fv} of the reference sequences and indexes them in hash table,
+        with the key being hash of a minimalizer value being a list of location of the minimalizer copies. Then for each query
+        sequence, genomap takess query minimalizers as \emph{seeds}, finds exact matches (i.e \emph{anchors}) to the reference,
+        and identifies sets of coliner anchors as \emph{chainss}. If base level aligment is requested, genomap applies dynamic regions
+        betwween adjacent anchor in chains.
+\end{document}
